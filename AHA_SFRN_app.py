@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.datasets import load_wine
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 
@@ -36,61 +36,70 @@ def run_villagenet(X, villages, neighbors, comms):
     model = VN.VillageNet(
         villages=int(villages),
         neighbors=int(neighbors),
-        normalize=0,  # normalization handled outside
+        normalize=0,   # normalization is handled outside
     )
-    model.fit(X, comms=int(comms) if comms is not None else None)
+    if comms is not None:
+        model.fit(X, comms=int(comms))
+    else:
+        model.fit(X)
     return np.asarray(model.comm_id)
 
 
-def run_kmeans(X, comms):
+def run_kmeans(X, n_clusters):
     model = KMeans(
-        n_clusters=int(comms),
+        n_clusters=int(n_clusters),
         random_state=0,
-        n_init=10,
+        n_init=10
     )
     return model.fit_predict(X)
 
 
-def run_gmm(X, comms):
+def run_gmm(X, n_clusters, covariance_type):
     model = GaussianMixture(
-        n_components=int(comms),
-        random_state=0,
+        n_components=int(n_clusters),
+        covariance_type=covariance_type,
+        random_state=0
     )
     return model.fit_predict(X)
 
 
-def plot_pca_results(X_pca, results):
-    n_methods = len(results)
-    fig, axes = plt.subplots(1, n_methods, figsize=(6 * n_methods, 5))
+def run_agglomerative(X, n_clusters, linkage):
+    model = AgglomerativeClustering(
+        n_clusters=int(n_clusters),
+        linkage=linkage
+    )
+    return model.fit_predict(X)
 
-    if n_methods == 1:
-        axes = [axes]
 
-    for ax, (method_name, labels) in zip(axes, results.items()):
-        ax.scatter(X_pca[:, 0], X_pca[:, 1], c=labels)
-        ax.set_title(method_name)
-        ax.set_xlabel("PCA1")
-        ax.set_ylabel("PCA2")
-
+def plot_clusters(X_pca, labels, method_name):
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.scatter(X_pca[:, 0], X_pca[:, 1], c=labels)
+    ax.set_xlabel("PCA1")
+    ax.set_ylabel("PCA2")
+    ax.set_title(f"{method_name} clustering")
     plt.tight_layout()
     return fig
 
 
-st.set_page_config(page_title="VillageNet Clustering App", layout="wide")
+st.set_page_config(page_title="Clustering App", layout="wide")
 
-st.title("Multi-Method Clustering App")
-st.write("Compare VillageNet, K-Means, and Gaussian Mixture Model on uploaded data or the Wine sample dataset.")
+st.title("Clustering App")
+st.write("Choose one clustering method, set its hyperparameters, and visualize results in PCA space.")
 
 with st.expander("More Information"):
     st.write(
         """
         - Use the Wine dataset as sample data, or upload your own CSV.
         - Optionally normalize the data before clustering.
-        - Compare VillageNet, K-Means, and Gaussian Mixture Model.
-        - Visualize results in PCA1 vs PCA2.
+        - Choose one clustering algorithm from the dropdown.
+        - Method-specific hyperparameters will appear automatically.
+        - Results are visualized in PCA1 vs PCA2.
         """
     )
 
+# ----------------------------
+# Data input
+# ----------------------------
 st.subheader("Data")
 
 use_sample_data = st.checkbox("Use Sample Data (Wine)", value=True)
@@ -100,14 +109,13 @@ if not use_sample_data:
     uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 
 data = None
-display_df = None
 
 if use_sample_data:
     wine = load_wine()
     data = wine["data"]
-    display_df = pd.DataFrame(data, columns=wine["feature_names"])
+    df_display = pd.DataFrame(data, columns=wine["feature_names"])
     st.write("Using Wine sample data:")
-    st.dataframe(display_df)
+    st.dataframe(df_display)
 elif uploaded_file is not None:
     col1, col2, col3 = st.columns(3)
     transpose = col1.checkbox("Transpose Data", value=False)
@@ -119,105 +127,153 @@ elif uploaded_file is not None:
             uploaded_file,
             transpose=transpose,
             has_headers=has_headers,
-            has_index=has_index,
+            has_index=has_index
         )
-        display_df = df
         st.write("Uploaded data:")
         st.dataframe(df)
         data = np.asarray(df).astype(float)
     except Exception as e:
         st.error(f"Could not load the CSV as numeric data: {e}")
 
+# ----------------------------
+# Options and method selection
+# ----------------------------
 if data is not None:
     st.subheader("Options")
-
     normalize = st.checkbox("Normalize Data", value=False)
-
     X = maybe_normalize(data.copy(), normalize)
 
-    st.subheader("Methods")
-    use_villagenet = st.checkbox("VillageNet", value=True)
-    use_kmeans = st.checkbox("K-Means", value=True)
-    use_gmm = st.checkbox("Gaussian Mixture Model", value=True)
+    st.subheader("Clustering Method")
+    method = st.selectbox(
+        "Choose clustering method",
+        ["VillageNet", "K-Means", "Gaussian Mixture", "Agglomerative"]
+    )
 
     st.subheader("Hyperparameters")
 
-    col1, col2 = st.columns(2)
-    villages = col1.number_input(
-        "Number of villages (VillageNet)",
-        min_value=2,
-        max_value=int(X.shape[0]),
-        value=int(min(200, X.shape[0])),
-        step=1,
-    )
-    neighbors = col2.number_input(
-        "Number of nearest neighbors (VillageNet)",
-        min_value=1,
-        max_value=int(X.shape[0]),
-        value=int(min(20, X.shape[0])),
-        step=1,
-    )
+    # Method-specific hyperparameters
+    vn_villages = None
+    vn_neighbors = None
+    vn_set_clusters = None
+    vn_comms = None
 
-    set_num_clusters = st.checkbox("Set number of clusters manually", value=True)
+    km_clusters = None
 
-    comms = None
-    if set_num_clusters:
-        comms = st.number_input(
+    gmm_clusters = None
+    gmm_covariance = None
+
+    agg_clusters = None
+    agg_linkage = None
+
+    if method == "VillageNet":
+        col1, col2 = st.columns(2)
+
+        vn_villages = col1.number_input(
+            "Number of villages",
+            min_value=2,
+            max_value=int(X.shape[0]),
+            value=int(min(200, X.shape[0])),
+            step=1
+        )
+
+        vn_neighbors = col2.number_input(
+            "Number of nearest neighbors",
+            min_value=1,
+            max_value=int(X.shape[0]),
+            value=int(min(20, X.shape[0])),
+            step=1
+        )
+
+        vn_set_clusters = st.checkbox("Set number of clusters manually", value=True)
+
+        if vn_set_clusters:
+            vn_comms = st.number_input(
+                "Number of clusters",
+                min_value=2,
+                max_value=int(X.shape[0]),
+                value=int(min(3, X.shape[0])),
+                step=1
+            )
+
+    elif method == "K-Means":
+        km_clusters = st.number_input(
             "Number of clusters",
             min_value=2,
             max_value=int(X.shape[0]),
             value=int(min(3, X.shape[0])),
-            step=1,
+            step=1
         )
 
+    elif method == "Gaussian Mixture":
+        col1, col2 = st.columns(2)
+
+        gmm_clusters = col1.number_input(
+            "Number of clusters",
+            min_value=2,
+            max_value=int(X.shape[0]),
+            value=int(min(3, X.shape[0])),
+            step=1
+        )
+
+        gmm_covariance = col2.selectbox(
+            "Covariance type",
+            ["full", "tied", "diag", "spherical"]
+        )
+
+    elif method == "Agglomerative":
+        col1, col2 = st.columns(2)
+
+        agg_clusters = col1.number_input(
+            "Number of clusters",
+            min_value=2,
+            max_value=int(X.shape[0]),
+            value=int(min(3, X.shape[0])),
+            step=1
+        )
+
+        agg_linkage = col2.selectbox(
+            "Linkage",
+            ["ward", "complete", "average", "single"]
+        )
+
+    # ----------------------------
+    # Run clustering
+    # ----------------------------
     with st.form("cluster_form"):
         run = st.form_submit_button("Run Clustering")
 
     if run:
-        results = {}
+        try:
+            if method == "VillageNet":
+                labels = run_villagenet(
+                    X,
+                    villages=vn_villages,
+                    neighbors=vn_neighbors,
+                    comms=vn_comms if vn_set_clusters else None
+                )
 
-        if use_villagenet:
-            try:
-                vn_labels = run_villagenet(X, villages, neighbors, comms)
-                results["VillageNet"] = vn_labels
-            except Exception as e:
-                st.error(f"VillageNet failed: {e}")
+            elif method == "K-Means":
+                labels = run_kmeans(X, km_clusters)
 
-        if use_kmeans:
-            if comms is None:
-                st.error("K-Means requires the number of clusters to be set.")
+            elif method == "Gaussian Mixture":
+                labels = run_gmm(X, gmm_clusters, gmm_covariance)
+
+            elif method == "Agglomerative":
+                labels = run_agglomerative(X, agg_clusters, agg_linkage)
+
             else:
-                try:
-                    km_labels = run_kmeans(X, comms)
-                    results["K-Means"] = km_labels
-                except Exception as e:
-                    st.error(f"K-Means failed: {e}")
+                st.error("Unknown clustering method selected.")
+                labels = None
 
-        if use_gmm:
-            if comms is None:
-                st.error("Gaussian Mixture Model requires the number of clusters to be set.")
-            else:
-                try:
-                    gmm_labels = run_gmm(X, comms)
-                    results["Gaussian Mixture"] = gmm_labels
-                except Exception as e:
-                    st.error(f"Gaussian Mixture failed: {e}")
+            if labels is not None:
+                pca = PCA(n_components=2)
+                X_pca = pca.fit_transform(X)
 
-        if not results:
-            st.warning("No clustering result was produced.")
-        else:
-            pca = PCA(n_components=2)
-            X_pca = pca.fit_transform(X)
+                st.subheader("PCA Visualization")
+                fig = plot_clusters(X_pca, labels, method)
+                st.pyplot(fig)
 
-            st.subheader("PCA Visualization")
-            fig = plot_pca_results(X_pca, results)
-            st.pyplot(fig)
-
-            st.subheader("Cluster Assignments")
-
-            for method_name, labels in results.items():
-                st.markdown(f"### {method_name}")
-
+                st.subheader("Cluster Assignments")
                 df_labels = pd.DataFrame({
                     "Index": np.arange(len(labels)),
                     "Cluster": labels
@@ -226,5 +282,8 @@ if data is not None:
 
                 for cl in np.unique(labels):
                     inds = np.where(labels == cl)[0]
-                    with st.expander(f"{method_name} - Cluster {cl}"):
+                    with st.expander(f"Cluster {cl}"):
                         st.write(", ".join(map(str, inds)))
+
+        except Exception as e:
+            st.error(f"{method} failed: {e}")
