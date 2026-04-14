@@ -92,7 +92,7 @@ class VillageNet():
         self.A=self.A+self.A.T
 
         model=wl.walk_likelihood(self.A)
-        model.WLCF(bifuraction_type=='NMF',l_max=8)
+        model.WLCF(bifuraction_type='NMF',l_max=8)
         #if self.villages>thr_clusters:
 
         #    U=np.random.random((self.villages,thr_clusters))
