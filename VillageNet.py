@@ -93,13 +93,14 @@ class VillageNet():
 
         model=wl.walk_likelihood(self.A)
 
-        if self.villages>thr_clusters:
+        #if self.villages>thr_clusters:
 
-            U=np.random.random((self.villages,thr_clusters))
-            model.WLM(U=U,l_max=8,comms=comms,**WLCF_args)
+        #    U=np.random.random((self.villages,thr_clusters))
+        #    model.WLM(U=U,l_max=8,comms=comms,**WLCF_args)
 
-        else:
-            model.WLM(comms=comms,**WLCF_args)
+        #else:
+        #    model.WLM(comms=comms,**WLCF_args)
+        model.WLCF(bifuraction_type='NMF',l_max=8)
         self.comm_id=model.comm_id[self.labels]
 
         return model
