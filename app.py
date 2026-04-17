@@ -472,7 +472,7 @@ with col3:
     st.plotly_chart(fig, use_container_width=True)
 
 # ── 1c. Instrument Distributions ─────────────────────────────────────────
-st.subheader("1e. Psychosocial Instruments")
+st.subheader("1c. Psychosocial Instruments")
 st.markdown("""
 Each participant completed **7 validated instruments** measuring depression (PHQ-8),
 anxiety (GAD-2, PROMIS), perceived stress (PSS-10), PTSD symptoms (PCL-6), and
@@ -499,7 +499,7 @@ for i, col_name in enumerate(PSYCHOSOCIAL_TOTALS):
 
 
 # ── 1d. Missingness Patterns ───────────────────────────────────────────────
-st.subheader("1c. Missingness Patterns")
+st.subheader("1d. Missingness Patterns")
 st.markdown("""
 In clinical practice, missing data is everywhere: a patient forgets to complete a
 questionnaire, a blood sample hemolyzes, or a sensor drops offline. **How** data is
@@ -600,7 +600,7 @@ st.markdown("""
 
 
 # ── 1e. Imputation Strategies ──────────────────────────────────────────────
-st.subheader("1d. Imputation Strategies")
+st.subheader("1e. Imputation Strategies")
 st.markdown("""
 Once we understand *why* data is missing, we need to decide how to fill the gaps.
 Think of it like a clinician estimating a patient's missing lab value: you could use
