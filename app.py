@@ -293,19 +293,22 @@ except FileNotFoundError:
 survey_miss, omics_miss, geo_miss, truth_survey, truth_omics, truth_geo = inject_missingness(
     survey_raw, omics, geo)
 
-# Sidebar: clustering parameters
+# Clustering parameters are configured in Step 3; initialize defaults here so the
+# pipeline at the top of the script can run before those widgets render.
+st.session_state.setdefault("cluster_method", "GMM")
+st.session_state.setdefault("n_clusters_input", 3)
+st.session_state.setdefault("vn_villages", 170)
+st.session_state.setdefault("vn_neighbors", 60)
+cluster_method = st.session_state["cluster_method"]
+n_clusters_input = st.session_state["n_clusters_input"]
+vn_villages = st.session_state["vn_villages"]
+vn_neighbors = st.session_state["vn_neighbors"]
+
 with st.sidebar:
     st.markdown("### Settings")
-    cluster_method = st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"])
-    if cluster_method == "VillageNet":
-        vn_villages = st.slider("VillageNet: number of villages", 10, 300, 170, step=10)
-        vn_neighbors = st.slider("VillageNet: neighbors per village", 5, 100, 60, step=5)
-        n_clusters_input = 3  # placeholder, VillageNet auto-detects
-    else:
-        vn_villages, vn_neighbors = 170, 60
-        n_clusters_input = st.slider("Number of clusters (k)", 2, 10, 3)
+    st.caption("Clustering parameters are set in **Step 3**. Scroll down to follow the "
+               "analysis pipeline step by step.")
     st.divider()
-    st.caption("Scroll down to follow the analysis pipeline step by step.")
 
     # Glossary expander
     with st.expander("Glossary of Key Terms"):
@@ -982,7 +985,7 @@ moderate issues, and those struggling with everything simultaneously. Instead of
 treating everyone the same, identifying these profiles allows for **targeted
 interventions**.
 
-Three algorithms are available (select in sidebar):
+Three algorithms are available (configure below):
 """)
 
 st.markdown("""
@@ -993,6 +996,23 @@ st.markdown("""
 | **VillageNet** | Creates micro-clusters ("villages"), builds a nearest-neighbor network, then uses community detection to find natural groupings | **Auto-detected** |
 """)
 st.markdown("""Try using clustering your data: https://ahasfrnclustering.streamlit.app/""")
+
+# ── Clustering parameter controls ───────────────────────────────────────
+with st.container(border=True):
+    st.markdown("#### Clustering Parameters")
+    param_cols = st.columns([1, 2])
+    with param_cols[0]:
+        st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"],
+                     key="cluster_method")
+    with param_cols[1]:
+        if st.session_state["cluster_method"] == "VillageNet":
+            st.slider("VillageNet: number of villages", 10, 300,
+                      step=10, key="vn_villages")
+            st.slider("VillageNet: neighbors per village", 5, 100,
+                      step=5, key="vn_neighbors")
+        else:
+            st.slider("Number of clusters (k)", 2, 10, key="n_clusters_input")
+    st.caption("Changes re-run the whole pipeline using the selected parameters.")
 
 if cluster_method == "VillageNet":
     st.markdown(f"""
