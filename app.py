@@ -613,7 +613,12 @@ impute_method = st.selectbox(
 )
 
 # Pick a demonstration column that has missingness
-demo_col = "PSQI_global" if "PSQI_global" in survey_miss.columns else miss_cols_survey[0]
+demo_col = st.selectbox(
+    "Select a column to explore:",
+    ["PHQ8_total", "PSQI_global", "PROMIS_dep_raw"],
+    key="demo_column_select"
+)
+#demo_col = "PSQI_global" if "PSQI_global" in survey_miss.columns else miss_cols_survey[0]
 demo_label = PSYCH_LABELS.get(demo_col, demo_col)
 
 has_missing = survey_miss[demo_col].isnull().any()
@@ -637,12 +642,12 @@ if "Complete cases" in impute_method:
     imputed_values = pd.Series(dtype=float)
 
 elif "Mean/Median" in impute_method:
-    fill_val = survey_miss[demo_col].median()
+    fill_val = survey_miss[demo_col].mean()
     imputed_series = survey_miss[demo_col].fillna(fill_val)
     imputed_values = pd.Series(fill_val, index=true_values.index) if has_missing else pd.Series(dtype=float)
-    method_name = "Median"
+    method_name = "Mean"
     st.info(f"""
-    **Mean/Median imputation:** Replace every missing value with the column median
+    **Mean/Median imputation:** Replace every missing value with the column mean
     ({fill_val:.1f} for {demo_label}).
 
     *Clinical analogy:* Estimating a patient's missing blood pressure as the clinic-wide
