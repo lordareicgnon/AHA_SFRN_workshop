@@ -298,11 +298,11 @@ with st.sidebar:
     st.markdown("### Settings")
     cluster_method = st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"])
     if cluster_method == "VillageNet":
-        vn_villages = st.slider("VillageNet: number of villages", 20, 120, 60, step=10)
+        vn_villages = st.slider("VillageNet: number of villages", 10, 300, 20, step=10)
         vn_neighbors = st.slider("VillageNet: neighbors per village", 5, 40, 20, step=5)
         n_clusters_input = 3  # placeholder, VillageNet auto-detects
     else:
-        vn_villages, vn_neighbors = 60, 20
+        vn_villages, vn_neighbors = 20, 20
         n_clusters_input = st.slider("Number of clusters (k)", 2, 10, 3)
     st.divider()
     st.caption("Scroll down to follow the analysis pipeline step by step.")
@@ -446,13 +446,6 @@ with st.expander("Explore: raw data tables"):
     with t3:
         st.dataframe(omics.head(50), use_container_width=True, height=250)
 
-st.markdown("""
-The original datasets are **100% complete**. However, real-world clinical data
-almost always has missing values -- patients skip questions, lab samples get lost,
-sensors malfunction. To teach proper handling of missingness, we have **injected
-realistic missing-data patterns** into copies of these datasets. The sections below
-walk through identifying and addressing those gaps.
-""")
 
 # ── 1b. Demographics ────────────────────────────────────────────────────
 st.subheader("1b. Cohort Demographics")
@@ -510,14 +503,9 @@ for i, col_name in enumerate(PSYCHOSOCIAL_TOTALS):
 
 # ── 1d. Missingness Patterns ───────────────────────────────────────────────
 st.subheader("1d. Missingness Patterns")
-st.markdown("""
-In clinical practice, missing data is everywhere: a patient forgets to complete a
-questionnaire, a blood sample hemolyzes, or a sensor drops offline. **How** data is
-missing matters as much as **how much** is missing, because different mechanisms
-require different solutions.
 
-We injected three types of missingness into the data so you can see them side by side.
-Use the toggle below to explore each type:
+st.markdown("""
+The original datasets are fully complete. In real-world clinical settings, however, missing data is the norm rather than the exception. Patients may skip questionnaire items, lab samples can be compromised, and monitoring devices may fail. These gaps are not just inevitable—they are meaningful. The pattern of missingness is just as important as the amount, because each type arises from different underlying causes and requires different analytical approaches. To support understanding of how missing data should be handled, modified versions of these datasets have been created with realistic missingness patterns applied. Three common types of missing data have been introduced to enable direct comparison. Use the toggle below to explore each type:
 """)
 
 miss_type = st.radio(
