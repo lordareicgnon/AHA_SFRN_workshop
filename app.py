@@ -766,11 +766,27 @@ After standardization, a score of +1 on *any* instrument means "one standard dev
 above average" -- making comparisons fair and meaningful.
 """)
 
+# --- Raw data ---
+raw_df = survey_raw[PSYCHOSOCIAL_TOTALS].copy()
+
+st.markdown("### Raw data (original scale)")
+st.dataframe(raw_df, use_container_width=True)
+
+# --- Checkbox toggle ---
+show_standardized = st.checkbox("Show standardized data (z-scored)")
+
+if show_standardized:
+    standardized_df = (raw_df - raw_df.mean()) / raw_df.std()
+
+    st.markdown("### Standardized data (z-scored)")
+    st.dataframe(standardized_df, use_container_width=True)
+
 st.info("""
-**Data is clean and standardized.** We have handled missing values, confirmed our
-cohort demographics, and put all instruments on the same scale. Next question:
-what are these 7 instruments actually measuring? Are they capturing 7 different
-things, or different reflections of the same underlying condition?
+**Data is clean and standardized.** Missing values have been handled, cohort
+characteristics have been reviewed, and all instruments are now on the same scale.
+The next question is conceptual: what are these instruments actually measuring?
+Are they capturing distinct constructs, or different expressions of the same
+underlying condition?
 """)
 
 
