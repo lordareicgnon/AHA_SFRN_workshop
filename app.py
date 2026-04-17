@@ -991,6 +991,7 @@ st.markdown("""
 | **K-Means** | Groups patients into k clusters by finding the k "center points" that minimize each patient's distance to their nearest center | You choose k |
 | **GMM** | Fits k bell-shaped distributions to the data; each patient has a probability of belonging to each group (soft assignment) | You choose k |
 | **VillageNet** | Creates micro-clusters ("villages"), builds a nearest-neighbor network, then uses community detection to find natural groupings | **Auto-detected** |
+Try using clustering your data: https://ahasfrnclustering.streamlit.app/
 """)
 
 if cluster_method == "VillageNet":
@@ -1009,7 +1010,7 @@ if cluster_method == "VillageNet":
            tightly-connected communities. The optimal number is determined **automatically**.
 
         *Reference: [VillageNet (arXiv:2501.10471)](https://arxiv.org/abs/2501.10471)*
-        """)
+                """)
 else:
     st.markdown(f"""
     For K-Means and GMM, we compare **silhouette score** (higher = better separation
