@@ -94,6 +94,7 @@ with st.expander("More Information"):
         - Choose one clustering algorithm from the dropdown.
         - Method-specific hyperparameters will appear automatically.
         - Results are visualized in PCA1 vs PCA2.
+        - Link to sourcecode: https://github.com/lordareicgnon/AHA_SFRN_workshop
         """
     )
 
