@@ -992,7 +992,7 @@ st.markdown("""
 | **GMM** | Fits k bell-shaped distributions to the data; each patient has a probability of belonging to each group (soft assignment) | You choose k |
 | **VillageNet** | Creates micro-clusters ("villages"), builds a nearest-neighbor network, then uses community detection to find natural groupings | **Auto-detected** |
 """)
-st.markdown(""Try using clustering your data: https://ahasfrnclustering.streamlit.app/"")
+st.markdown("""Try using clustering your data: https://ahasfrnclustering.streamlit.app/""")
 
 if cluster_method == "VillageNet":
     st.markdown(f"""
