@@ -173,7 +173,7 @@ if data is not None:
             "Number of villages",
             min_value=2,
             max_value=int(X.shape[0]),
-            value=int(min(200, X.shape[0])),
+            value=int(X.shape[0]/10 +1),
             step=1
         )
 
@@ -185,7 +185,7 @@ if data is not None:
             step=1
         )
 
-        vn_set_clusters = st.checkbox("Set number of clusters manually", value=True)
+        vn_set_clusters = st.checkbox("Set number of clusters manually", value=False)
 
         if vn_set_clusters:
             vn_comms = st.number_input(
