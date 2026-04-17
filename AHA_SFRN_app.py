@@ -185,17 +185,7 @@ if data is not None:
             step=1
         )
 
-        vn_set_clusters = st.checkbox("Set number of clusters manually", value=False)
-
-        if vn_set_clusters:
-            vn_comms = st.number_input(
-                "Number of clusters",
-                min_value=2,
-                max_value=int(X.shape[0]),
-                value=int(min(3, X.shape[0])),
-                step=1
-            )
-
+        
     elif method == "K-Means":
         km_clusters = st.number_input(
             "Number of clusters",
@@ -249,9 +239,7 @@ if data is not None:
                 labels = run_villagenet(
                     X,
                     villages=vn_villages,
-                    neighbors=vn_neighbors,
-                    comms=vn_comms if vn_set_clusters else None
-                )
+                    neighbors=vn_neighbors)
 
             elif method == "K-Means":
                 labels = run_kmeans(X, km_clusters)
