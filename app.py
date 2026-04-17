@@ -1222,6 +1222,107 @@ else:
     fig.update_layout(height=550, margin=dict(l=0, r=0, t=40, b=0), font=FONT)
     st.plotly_chart(fig, use_container_width=True)
 
+# ── Cluster-specific map: where do patients from each phenotype reside? ──
+st.markdown("---")
+st.markdown("**Phenotype distribution map** -- see where patients from each cluster reside geographically:")
+
+pheno_counts = (survey.groupby(["zip_code", "stress_phenotype"]).size()
+                .unstack(fill_value=0).reindex(columns=phenotype_order, fill_value=0))
+pheno_totals = pheno_counts.sum(axis=1)
+pheno_pct = pheno_counts.div(pheno_totals, axis=0) * 100
+dominant = pheno_counts.idxmax(axis=1)
+
+zip_pheno = zip_all[["zip_code", "zip_str", "lat", "lon", "n"]].copy()
+zip_pheno = zip_pheno.merge(pheno_counts.add_suffix("_n").reset_index(), on="zip_code", how="left")
+zip_pheno = zip_pheno.merge(pheno_pct.add_suffix("_pct").reset_index(), on="zip_code", how="left")
+zip_pheno["dominant_phenotype"] = zip_pheno["zip_code"].map(dominant)
+for pheno in phenotype_order:
+    zip_pheno[f"{pheno}_n"] = zip_pheno[f"{pheno}_n"].fillna(0)
+    zip_pheno[f"{pheno}_pct"] = zip_pheno[f"{pheno}_pct"].fillna(0)
+
+col_m1, col_m2 = st.columns([1, 1])
+with col_m1:
+    pheno_map_choice = st.selectbox("Select phenotype to map:",
+                                     ["(All) Dominant phenotype per ZIP"] + phenotype_order,
+                                     key="pheno_map_sel")
+with col_m2:
+    metric_choice = st.radio("Display as:", ["Percent of ZIP", "Patient count"],
+                              horizontal=True, key="pheno_map_metric",
+                              disabled=(pheno_map_choice == "(All) Dominant phenotype per ZIP"))
+
+if _geojson_path.exists():
+    if pheno_map_choice == "(All) Dominant phenotype per ZIP":
+        fig = px.choropleth_mapbox(
+            zip_pheno, geojson=_zcta_geojson,
+            locations="zip_str",
+            featureidkey="properties.ZCTA5CE10",
+            color="dominant_phenotype",
+            color_discrete_map=COLORS,
+            category_orders={"dominant_phenotype": phenotype_order},
+            mapbox_style="open-street-map",
+            zoom=9.5,
+            center={"lat": zip_pheno["lat"].mean(), "lon": zip_pheno["lon"].mean()},
+            opacity=0.7,
+            hover_name="zip_str",
+            hover_data={"n": True, "dominant_phenotype": True, "zip_str": False,
+                        **{f"{p}_n": True for p in phenotype_order}},
+            title="Dominant Phenotype by ZIP Code",
+        )
+    else:
+        col_metric = f"{pheno_map_choice}_pct" if metric_choice == "Percent of ZIP" else f"{pheno_map_choice}_n"
+        fig = px.choropleth_mapbox(
+            zip_pheno, geojson=_zcta_geojson,
+            locations="zip_str",
+            featureidkey="properties.ZCTA5CE10",
+            color=col_metric,
+            color_continuous_scale="Reds",
+            mapbox_style="open-street-map",
+            zoom=9.5,
+            center={"lat": zip_pheno["lat"].mean(), "lon": zip_pheno["lon"].mean()},
+            opacity=0.75,
+            hover_name="zip_str",
+            hover_data={"n": True, col_metric: ":.1f", "zip_str": False,
+                        **{f"{p}_n": True for p in phenotype_order}},
+            title=f"{pheno_map_choice} Patients by ZIP ({metric_choice})",
+        )
+    fig.update_layout(height=550, margin=dict(l=0, r=0, t=40, b=0), font=FONT)
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    if pheno_map_choice == "(All) Dominant phenotype per ZIP":
+        fig = px.scatter_mapbox(
+            zip_pheno, lat="lat", lon="lon",
+            color="dominant_phenotype",
+            color_discrete_map=COLORS,
+            category_orders={"dominant_phenotype": phenotype_order},
+            size=zip_pheno["n"].clip(lower=1), size_max=25,
+            hover_name="zip_str",
+            mapbox_style="open-street-map",
+            zoom=9.5,
+            center={"lat": zip_pheno["lat"].mean(), "lon": zip_pheno["lon"].mean()},
+            opacity=0.85,
+            title="Dominant Phenotype by ZIP Code",
+        )
+    else:
+        col_metric = f"{pheno_map_choice}_pct" if metric_choice == "Percent of ZIP" else f"{pheno_map_choice}_n"
+        fig = px.scatter_mapbox(
+            zip_pheno, lat="lat", lon="lon",
+            color=col_metric,
+            color_continuous_scale="Reds",
+            size=zip_pheno[f"{pheno_map_choice}_n"].clip(lower=1), size_max=30,
+            hover_name="zip_str",
+            mapbox_style="open-street-map",
+            zoom=9.5,
+            center={"lat": zip_pheno["lat"].mean(), "lon": zip_pheno["lon"].mean()},
+            opacity=0.85,
+            title=f"{pheno_map_choice} Patients by ZIP ({metric_choice})",
+        )
+    fig.update_layout(height=550, margin=dict(l=0, r=0, t=40, b=0), font=FONT)
+    st.plotly_chart(fig, use_container_width=True)
+
+st.caption("Use the dropdown to see where patients from a specific cluster concentrate, "
+           "or view the dominant phenotype in each ZIP code. Hover a ZIP to see the full "
+           "phenotype breakdown.")
+
 st.success("""
 **Key finding:** High-burden patients live in neighborhoods with significantly higher
 deprivation, pollution, crime, and food desert scores -- and lower income, green space, and
