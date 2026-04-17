@@ -471,7 +471,34 @@ with col3:
     fig.update_layout(font=FONT, height=280, yaxis=dict(categoryorder="total ascending"))
     st.plotly_chart(fig, use_container_width=True)
 
-# ── 1c. Missingness Patterns ───────────────────────────────────────────────
+# ── 1c. Instrument Distributions ─────────────────────────────────────────
+st.subheader("1e. Psychosocial Instruments")
+st.markdown("""
+Each participant completed **7 validated instruments** measuring depression (PHQ-8),
+anxiety (GAD-2, PROMIS), perceived stress (PSS-10), PTSD symptoms (PCL-6), and
+sleep quality (PSQI). Think of each instrument as a different lens on the same
+patient -- like how a blood pressure cuff and an EKG both assess the heart but
+capture different information.
+
+These instruments have **different scales** -- PHQ-8 ranges 0-24 while GAD-2 ranges
+0-6 -- so we will need to standardize them before analysis (just as you would not
+compare a temperature in Fahrenheit to one in Celsius without converting first).
+""")
+
+desc = survey_raw[PSYCHOSOCIAL_TOTALS].describe().T.round(2)
+desc.index = [PSYCH_LABELS[c] for c in desc.index]
+st.dataframe(desc[["mean", "std", "min", "25%", "50%", "75%", "max"]], use_container_width=True)
+
+cols = st.columns(4)
+for i, col_name in enumerate(PSYCHOSOCIAL_TOTALS):
+    with cols[i % 4]:
+        fig = px.histogram(survey_raw, x=col_name, nbins=25, color_discrete_sequence=["steelblue"],
+                           title=PSYCH_LABELS[col_name].split(" (")[0])
+        fig.update_layout(height=200, font=dict(size=11), margin=dict(t=30, b=20), showlegend=False, bargap=0.05)
+        st.plotly_chart(fig, use_container_width=True)
+
+
+# ── 1d. Missingness Patterns ───────────────────────────────────────────────
 st.subheader("1c. Missingness Patterns")
 st.markdown("""
 In clinical practice, missing data is everywhere: a patient forgets to complete a
@@ -572,7 +599,7 @@ st.markdown("""
 """)
 
 
-# ── 1d. Imputation Strategies ──────────────────────────────────────────────
+# ── 1e. Imputation Strategies ──────────────────────────────────────────────
 st.subheader("1d. Imputation Strategies")
 st.markdown("""
 Once we understand *why* data is missing, we need to decide how to fill the gaps.
@@ -719,33 +746,6 @@ st.markdown("""
 > prediction model, rather than excluding incomplete records and losing statistical
 > power.
 """)
-
-
-# ── 1e. Instrument Distributions ─────────────────────────────────────────
-st.subheader("1e. Psychosocial Instruments")
-st.markdown("""
-Each participant completed **7 validated instruments** measuring depression (PHQ-8),
-anxiety (GAD-2, PROMIS), perceived stress (PSS-10), PTSD symptoms (PCL-6), and
-sleep quality (PSQI). Think of each instrument as a different lens on the same
-patient -- like how a blood pressure cuff and an EKG both assess the heart but
-capture different information.
-
-These instruments have **different scales** -- PHQ-8 ranges 0-24 while GAD-2 ranges
-0-6 -- so we will need to standardize them before analysis (just as you would not
-compare a temperature in Fahrenheit to one in Celsius without converting first).
-""")
-
-desc = survey_raw[PSYCHOSOCIAL_TOTALS].describe().T.round(2)
-desc.index = [PSYCH_LABELS[c] for c in desc.index]
-st.dataframe(desc[["mean", "std", "min", "25%", "50%", "75%", "max"]], use_container_width=True)
-
-cols = st.columns(4)
-for i, col_name in enumerate(PSYCHOSOCIAL_TOTALS):
-    with cols[i % 4]:
-        fig = px.histogram(survey_raw, x=col_name, nbins=25, color_discrete_sequence=["steelblue"],
-                           title=PSYCH_LABELS[col_name].split(" (")[0])
-        fig.update_layout(height=200, font=dict(size=11), margin=dict(t=30, b=20), showlegend=False, bargap=0.05)
-        st.plotly_chart(fig, use_container_width=True)
 
 # ── 1f. Standardization ─────────────────────────────────────────────────
 st.subheader("1f. Standardization")
