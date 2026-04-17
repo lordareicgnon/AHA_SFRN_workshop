@@ -436,6 +436,16 @@ miss_data = pd.DataFrame({
     "Missing Values (original)": [survey_raw.isnull().sum().sum(), geo.isnull().sum().sum(), omics.isnull().sum().sum()],
 })
 st.dataframe(miss_data, use_container_width=True, hide_index=True)
+
+with st.expander("Explore: raw data tables"):
+    t1, t2, t3 = st.tabs(["Survey", "Geospatial", "Omics"])
+    with t1:
+        st.dataframe(survey_raw.head(50), use_container_width=True, height=250)
+    with t2:
+        st.dataframe(geo, use_container_width=True, height=250)
+    with t3:
+        st.dataframe(omics.head(50), use_container_width=True, height=250)
+
 st.markdown("""
 The original datasets are **100% complete**. However, real-world clinical data
 almost always has missing values -- patients skip questions, lab samples get lost,
@@ -759,15 +769,6 @@ important, but simply because its numbers are bigger.
 After standardization, a score of +1 on *any* instrument means "one standard deviation
 above average" -- making comparisons fair and meaningful.
 """)
-
-with st.expander("Explore: raw data tables"):
-    t1, t2, t3 = st.tabs(["Survey", "Geospatial", "Omics"])
-    with t1:
-        st.dataframe(survey_raw.head(50), use_container_width=True, height=250)
-    with t2:
-        st.dataframe(geo, use_container_width=True, height=250)
-    with t3:
-        st.dataframe(omics.head(50), use_container_width=True, height=250)
 
 st.info("""
 **Data is clean and standardized.** We have handled missing values, confirmed our
