@@ -186,7 +186,7 @@ def run_clustering(survey, method, k, vn_villages=60, vn_neighbors=20):
         from VillageNet import VillageNet
         old_stdout = sys.stdout
         sys.stdout = io.StringIO()  # suppress VillageNet prints
-        model = VillageNet(villages=vn_villages, normalize=1, neighbors=vn_neighbors)
+        model = VillageNet(villages=vn_villages, normalize=0, neighbors=vn_neighbors)
         model.fit(X)
         sys.stdout = old_stdout
         labels = model.comm_id
@@ -298,11 +298,11 @@ with st.sidebar:
     st.markdown("### Settings")
     cluster_method = st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"])
     if cluster_method == "VillageNet":
-        vn_villages = st.slider("VillageNet: number of villages", 10, 300, 20, step=10)
-        vn_neighbors = st.slider("VillageNet: neighbors per village", 5, 100, 20, step=5)
+        vn_villages = st.slider("VillageNet: number of villages", 10, 300, 170, step=10)
+        vn_neighbors = st.slider("VillageNet: neighbors per village", 5, 100, 60, step=5)
         n_clusters_input = 3  # placeholder, VillageNet auto-detects
     else:
-        vn_villages, vn_neighbors = 20, 20
+        vn_villages, vn_neighbors = 170, 60
         n_clusters_input = st.slider("Number of clusters (k)", 2, 10, 3)
     st.divider()
     st.caption("Scroll down to follow the analysis pipeline step by step.")
@@ -606,11 +606,6 @@ the population average, look at similar patients, or simply ignore that patient.
 Each approach has trade-offs.
 """)
 
-impute_method = st.selectbox(
-    "Select an imputation method:",
-    ["Complete cases only (listwise deletion)", "Mean/Median imputation", "KNN imputation (using similar patients)"],
-    key="impute_select"
-)
 
 # Pick a demonstration column that has missingness
 demo_col = st.selectbox(
@@ -620,6 +615,14 @@ demo_col = st.selectbox(
 )
 #demo_col = "PSQI_global" if "PSQI_global" in survey_miss.columns else miss_cols_survey[0]
 demo_label = PSYCH_LABELS.get(demo_col, demo_col)
+
+
+impute_method = st.selectbox(
+    "Select an imputation method:",
+    ["Complete cases only (listwise deletion)", "Mean/Median imputation", "KNN imputation (using similar patients)"],
+    key="impute_select"
+)
+
 
 has_missing = survey_miss[demo_col].isnull().any()
 missing_mask = survey_miss[demo_col].isnull()
