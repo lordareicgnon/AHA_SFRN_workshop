@@ -32,16 +32,13 @@ def maybe_normalize(X, normalize):
     return scaler.fit_transform(X)
 
 
-def run_villagenet(X, villages, neighbors, comms):
+def run_villagenet(X, villages, neighbors):
     model = VN.VillageNet(
         villages=int(villages),
         neighbors=int(neighbors),
         normalize=0,   # normalization is handled outside
     )
-    if comms is not None:
-        model.fit(X, comms=int(comms))
-    else:
-        model.fit(X)
+    model.fit(X)
     return np.asarray(model.comm_id)
 
 
