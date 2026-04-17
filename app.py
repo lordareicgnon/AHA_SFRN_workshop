@@ -1004,15 +1004,21 @@ with st.container(border=True):
     with param_cols[0]:
         st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"],
                      key="cluster_method")
+        st.session_state.setdefault("cluster_method", "GMM")
+        
     with param_cols[1]:
         if st.session_state["cluster_method"] == "VillageNet":
             st.slider("VillageNet: number of villages", 10, 300,
                       step=10, key="vn_villages")
             st.slider("VillageNet: neighbors per village", 5, 100,
                       step=5, key="vn_neighbors")
+            st.session_state.setdefault("vn_villages", 170)
+            st.session_state.setdefault("vn_neighbors", 60)
         else:
             st.slider("Number of clusters (k)", 2, 10, key="n_clusters_input")
-    st.caption("Changes re-run the whole pipeline using the selected parameters.")
+            st.session_state.setdefault("n_clusters_input", 3)
+        
+    #st.caption("Changes re-run the whole pipeline using the selected parameters.")
 
 if cluster_method == "VillageNet":
     st.markdown(f"""
