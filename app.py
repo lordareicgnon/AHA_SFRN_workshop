@@ -186,7 +186,7 @@ def run_clustering(survey, method, k, vn_villages=60, vn_neighbors=20):
         from VillageNet import VillageNet
         old_stdout = sys.stdout
         sys.stdout = io.StringIO()  # suppress VillageNet prints
-        model = VillageNet(villages=vn_villages, normalize=0, neighbors=vn_neighbors)
+        model = VillageNet(villages=vn_villages, normalize=1, neighbors=vn_neighbors)
         model.fit(X)
         sys.stdout = old_stdout
         labels = model.comm_id
@@ -299,7 +299,7 @@ with st.sidebar:
     cluster_method = st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"])
     if cluster_method == "VillageNet":
         vn_villages = st.slider("VillageNet: number of villages", 10, 300, 20, step=10)
-        vn_neighbors = st.slider("VillageNet: neighbors per village", 5, 40, 20, step=5)
+        vn_neighbors = st.slider("VillageNet: neighbors per village", 5, 100, 20, step=5)
         n_clusters_input = 3  # placeholder, VillageNet auto-detects
     else:
         vn_villages, vn_neighbors = 20, 20
