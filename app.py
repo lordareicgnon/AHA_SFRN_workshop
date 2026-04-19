@@ -969,135 +969,6 @@ psychosocial distress), explaining ~{:.0f}% of variance. The data has clear mult
 structure. Now we can ask: *who are the people along this spectrum?*
 """.format(var_explained[0]*100))
 
-
-# ═════════════════════════════════════════════════════════════════════════════
-# STEP 3 — WHO ARE THE PEOPLE? (CLUSTERING)
-# ═════════════════════════════════════════════════════════════════════════════
-st.markdown("---")
-st.header("Step 3 -- Who Are the People?")
-st.markdown("""
-PCA told us *what* we are measuring (a general distress dimension). Now we ask:
-**are there distinct types of patients in our sample?**
-
-Clustering identifies **distinct patient profiles** -- like recognizing that your
-clinic has three types of patients: those doing well across the board, those with
-moderate issues, and those struggling with everything simultaneously. Instead of
-treating everyone the same, identifying these profiles allows for **targeted
-interventions**.
-
-Three algorithms are available (configure below):
-""")
-
-st.markdown("""
-| Algorithm | How it works | k selection |
-|-----------|-------------|-------------|
-| **K-Means** | Groups patients into k clusters by finding the k "center points" that minimize each patient's distance to their nearest center | You choose k |
-| **GMM** | Fits k bell-shaped distributions to the data; each patient has a probability of belonging to each group (soft assignment) | You choose k |
-| **VillageNet** | Creates micro-clusters ("villages"), builds a nearest-neighbor network, then uses community detection to find natural groupings | **Auto-detected** |
-""")
-st.markdown("""Try using clustering your data: https://ahasfrnclustering.streamlit.app/""")
-
-# ── Clustering parameter controls ───────────────────────────────────────
-with st.container(border=True):
-    st.markdown("#### Clustering Parameters")
-    param_cols = st.columns([1, 2])
-    with param_cols[0]:
-        st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"],
-                     key="cluster_method")
-        st.session_state.setdefault("cluster_method", "GMM")
-        
-    with param_cols[1]:
-        if st.session_state["cluster_method"] == "VillageNet":
-            st.slider("VillageNet: number of villages", 10, 300,
-                      step=10, key="vn_villages",value=170)
-            st.slider("VillageNet: neighbors per village", 5, 100,
-                      step=5, key="vn_neighbors",value=60)
-        else:
-            st.slider("Number of clusters (k)", 2, 10, key="n_clusters_input",value=3)
-            #st.session_state.setdefault("n_clusters_input", 3)
-        
-    #st.caption("Changes re-run the whole pipeline using the selected parameters.")
-
-if cluster_method == "VillageNet":
-    st.markdown(f"""
-    You selected **VillageNet** (villages={vn_villages}, neighbors={vn_neighbors}).
-    The algorithm automatically detected **k = {n_clusters}** communities
-    (silhouette = {sil_score:.3f}).
-    """)
-    with st.expander("How VillageNet works"):
-        st.markdown(f"""
-        1. **Micro-clustering:** K-Means creates **{vn_villages} villages** (small clusters)
-           -- intentionally over-segmenting the data.
-        2. **Graph construction:** A weighted graph connects villages whose members are nearest
-           neighbors (**{vn_neighbors} neighbors** per village).
-        3. **Community detection (WLCF):** Random walks on the village graph identify
-           tightly-connected communities. The optimal number is determined **automatically**.
-
-        *Reference: [VillageNet (arXiv:2501.10471)](https://arxiv.org/abs/2501.10471)*
-                """)
-else:
-    st.markdown(f"""
-    For K-Means and GMM, we compare **silhouette score** (higher = better separation
-    between patient groups) and **BIC** (lower = better model fit) across k=2 to 6:
-    """)
-    metrics = cluster_selection_metrics(survey_raw)
-    col1, col2 = st.columns(2)
-    with col1:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=metrics["k"], y=metrics["K-Means"], mode="lines+markers", name="K-Means"))
-        fig.add_trace(go.Scatter(x=metrics["k"], y=metrics["GMM"], mode="lines+markers", name="GMM"))
-        fig.add_vline(x=n_clusters, line_dash="dash", line_color="gray", annotation_text=f"k={n_clusters}")
-        fig.update_layout(title="Silhouette Score by k", xaxis_title="k", yaxis_title="Silhouette", height=350, font=FONT)
-        st.plotly_chart(fig, use_container_width=True)
-    with col2:
-        fig = px.line(metrics, x="k", y="BIC", markers=True, color_discrete_sequence=["green"])
-        fig.add_vline(x=n_clusters, line_dash="dash", line_color="gray", annotation_text=f"k={n_clusters}")
-        fig.update_layout(title="GMM BIC by k", height=350, font=FONT)
-        st.plotly_chart(fig, use_container_width=True)
-
-# ── Comparison toggle: side-by-side cluster assignments in PCA space ────
-st.subheader("3a. Compare Clustering Methods")
-compare_toggle = st.checkbox("Show side-by-side comparison of two methods in PCA space", key="compare_toggle")
-if compare_toggle:
-    comp_methods = ["K-Means", "GMM"]
-    if cluster_method == "VillageNet":
-        comp_methods.append("VillageNet")
-    col_left, col_right = st.columns(2)
-    method_a = col_left.selectbox("Method A", comp_methods, index=0, key="comp_a")
-    method_b = col_right.selectbox("Method B", comp_methods, index=min(1, len(comp_methods)-1), key="comp_b")
-
-    labels_a, _, _, k_a, _ = run_clustering(survey_raw, method_a, n_clusters_input, vn_villages, vn_neighbors)
-    labels_b, _, _, k_b, _ = run_clustering(survey_raw, method_b, n_clusters_input, vn_villages, vn_neighbors)
-
-    colors_a = generate_palette(k_a)
-    colors_b = generate_palette(k_b)
-    map_a = CLUSTER_MAP if k_a == 3 else {i: f"Cluster {i}" for i in range(k_a)}
-    map_b = CLUSTER_MAP if k_b == 3 else {i: f"Cluster {i}" for i in range(k_b)}
-
-    pca_a = pd.DataFrame({"PC1": X_pca[:, 0], "PC2": X_pca[:, 1],
-                           "Phenotype": [map_a[l] for l in labels_a]})
-    pca_b = pd.DataFrame({"PC1": X_pca[:, 0], "PC2": X_pca[:, 1],
-                           "Phenotype": [map_b[l] for l in labels_b]})
-
-    with col_left:
-        order_a = sorted(pca_a["Phenotype"].unique(), key=lambda x: list(map_a.values()).index(x) if x in map_a.values() else 0)
-        fig = px.scatter(pca_a, x="PC1", y="PC2", color="Phenotype",
-                         color_discrete_map=colors_a, opacity=0.5,
-                         category_orders={"Phenotype": order_a},
-                         title=f"{method_a} (k={k_a})")
-        fig.update_traces(marker=dict(size=4))
-        fig.update_layout(height=350, font=FONT)
-        st.plotly_chart(fig, use_container_width=True)
-    with col_right:
-        order_b = sorted(pca_b["Phenotype"].unique(), key=lambda x: list(map_b.values()).index(x) if x in map_b.values() else 0)
-        fig = px.scatter(pca_b, x="PC1", y="PC2", color="Phenotype",
-                         color_discrete_map=colors_b, opacity=0.5,
-                         category_orders={"Phenotype": order_b},
-                         title=f"{method_b} (k={k_b})")
-        fig.update_traces(marker=dict(size=4))
-        fig.update_layout(height=350, font=FONT)
-        st.plotly_chart(fig, use_container_width=True)
-
 st.subheader("2c. Visualizing Participants in Reduced Dimensions")
 st.markdown("""
 If all participants are projected into the first two principal components, the
@@ -1232,6 +1103,137 @@ PC1 explains about {var_explained_local[0]*100:.0f}% of the variance. This secti
 shows why normalization matters: PCA can either reflect true shared structure or be
 driven by measurement scale, depending on preprocessing.
 """)
+
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STEP 3 — WHO ARE THE PEOPLE? (CLUSTERING)
+# ═════════════════════════════════════════════════════════════════════════════
+st.markdown("---")
+st.header("Step 3 -- Who Are the People?")
+st.markdown("""
+PCA told us *what* we are measuring (a general distress dimension). Now we ask:
+**are there distinct types of patients in our sample?**
+
+Clustering identifies **distinct patient profiles** -- like recognizing that your
+clinic has three types of patients: those doing well across the board, those with
+moderate issues, and those struggling with everything simultaneously. Instead of
+treating everyone the same, identifying these profiles allows for **targeted
+interventions**.
+
+Three algorithms are available (configure below):
+""")
+
+st.markdown("""
+| Algorithm | How it works | k selection |
+|-----------|-------------|-------------|
+| **K-Means** | Groups patients into k clusters by finding the k "center points" that minimize each patient's distance to their nearest center | You choose k |
+| **GMM** | Fits k bell-shaped distributions to the data; each patient has a probability of belonging to each group (soft assignment) | You choose k |
+| **VillageNet** | Creates micro-clusters ("villages"), builds a nearest-neighbor network, then uses community detection to find natural groupings | **Auto-detected** |
+""")
+st.markdown("""Try using clustering your data: https://ahasfrnclustering.streamlit.app/""")
+
+# ── Clustering parameter controls ───────────────────────────────────────
+with st.container(border=True):
+    st.markdown("#### Clustering Parameters")
+    param_cols = st.columns([1, 2])
+    with param_cols[0]:
+        st.selectbox("Clustering algorithm", ["GMM", "K-Means", "VillageNet"],
+                     key="cluster_method")
+        st.session_state.setdefault("cluster_method", "GMM")
+        
+    with param_cols[1]:
+        if st.session_state["cluster_method"] == "VillageNet":
+            st.slider("VillageNet: number of villages", 10, 300,
+                      step=10, key="vn_villages",value=170)
+            st.slider("VillageNet: neighbors per village", 5, 100,
+                      step=5, key="vn_neighbors",value=60)
+        else:
+            st.slider("Number of clusters (k)", 2, 10, key="n_clusters_input",value=3)
+            #st.session_state.setdefault("n_clusters_input", 3)
+        
+    #st.caption("Changes re-run the whole pipeline using the selected parameters.")
+
+if cluster_method == "VillageNet":
+    st.markdown(f"""
+    You selected **VillageNet** (villages={vn_villages}, neighbors={vn_neighbors}).
+    The algorithm automatically detected **k = {n_clusters}** communities
+    (silhouette = {sil_score:.3f}).
+    """)
+    with st.expander("How VillageNet works"):
+        st.markdown(f"""
+        1. **Micro-clustering:** K-Means creates **{vn_villages} villages** (small clusters)
+           -- intentionally over-segmenting the data.
+        2. **Graph construction:** A weighted graph connects villages whose members are nearest
+           neighbors (**{vn_neighbors} neighbors** per village).
+        3. **Community detection (WLCF):** Random walks on the village graph identify
+           tightly-connected communities. The optimal number is determined **automatically**.
+
+        *Reference: [VillageNet (arXiv:2501.10471)](https://arxiv.org/abs/2501.10471)*
+                """)
+else:
+    st.markdown(f"""
+    For K-Means and GMM, we compare **silhouette score** (higher = better separation
+    between patient groups) and **BIC** (lower = better model fit) across k=2 to 6:
+    """)
+    metrics = cluster_selection_metrics(survey_raw)
+    col1, col2 = st.columns(2)
+    with col1:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=metrics["k"], y=metrics["K-Means"], mode="lines+markers", name="K-Means"))
+        fig.add_trace(go.Scatter(x=metrics["k"], y=metrics["GMM"], mode="lines+markers", name="GMM"))
+        fig.add_vline(x=n_clusters, line_dash="dash", line_color="gray", annotation_text=f"k={n_clusters}")
+        fig.update_layout(title="Silhouette Score by k", xaxis_title="k", yaxis_title="Silhouette", height=350, font=FONT)
+        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        fig = px.line(metrics, x="k", y="BIC", markers=True, color_discrete_sequence=["green"])
+        fig.add_vline(x=n_clusters, line_dash="dash", line_color="gray", annotation_text=f"k={n_clusters}")
+        fig.update_layout(title="GMM BIC by k", height=350, font=FONT)
+        st.plotly_chart(fig, use_container_width=True)
+
+# ── Comparison toggle: side-by-side cluster assignments in PCA space ────
+st.subheader("3a. Compare Clustering Methods")
+compare_toggle = st.checkbox("Show side-by-side comparison of two methods in PCA space", key="compare_toggle")
+if compare_toggle:
+    comp_methods = ["K-Means", "GMM"]
+    if cluster_method == "VillageNet":
+        comp_methods.append("VillageNet")
+    col_left, col_right = st.columns(2)
+    method_a = col_left.selectbox("Method A", comp_methods, index=0, key="comp_a")
+    method_b = col_right.selectbox("Method B", comp_methods, index=min(1, len(comp_methods)-1), key="comp_b")
+
+    labels_a, _, _, k_a, _ = run_clustering(survey_raw, method_a, n_clusters_input, vn_villages, vn_neighbors)
+    labels_b, _, _, k_b, _ = run_clustering(survey_raw, method_b, n_clusters_input, vn_villages, vn_neighbors)
+
+    colors_a = generate_palette(k_a)
+    colors_b = generate_palette(k_b)
+    map_a = CLUSTER_MAP if k_a == 3 else {i: f"Cluster {i}" for i in range(k_a)}
+    map_b = CLUSTER_MAP if k_b == 3 else {i: f"Cluster {i}" for i in range(k_b)}
+
+    pca_a = pd.DataFrame({"PC1": X_pca[:, 0], "PC2": X_pca[:, 1],
+                           "Phenotype": [map_a[l] for l in labels_a]})
+    pca_b = pd.DataFrame({"PC1": X_pca[:, 0], "PC2": X_pca[:, 1],
+                           "Phenotype": [map_b[l] for l in labels_b]})
+
+    with col_left:
+        order_a = sorted(pca_a["Phenotype"].unique(), key=lambda x: list(map_a.values()).index(x) if x in map_a.values() else 0)
+        fig = px.scatter(pca_a, x="PC1", y="PC2", color="Phenotype",
+                         color_discrete_map=colors_a, opacity=0.5,
+                         category_orders={"Phenotype": order_a},
+                         title=f"{method_a} (k={k_a})")
+        fig.update_traces(marker=dict(size=4))
+        fig.update_layout(height=350, font=FONT)
+        st.plotly_chart(fig, use_container_width=True)
+    with col_right:
+        order_b = sorted(pca_b["Phenotype"].unique(), key=lambda x: list(map_b.values()).index(x) if x in map_b.values() else 0)
+        fig = px.scatter(pca_b, x="PC1", y="PC2", color="Phenotype",
+                         color_discrete_map=colors_b, opacity=0.5,
+                         category_orders={"Phenotype": order_b},
+                         title=f"{method_b} (k={k_b})")
+        fig.update_traces(marker=dict(size=4))
+        fig.update_layout(height=350, font=FONT)
+        st.plotly_chart(fig, use_container_width=True)
+
 
 # ── Cluster profiles (the key bridge from PCA) ──────────────────────────
 st.subheader("3b. Cluster Profiles")
