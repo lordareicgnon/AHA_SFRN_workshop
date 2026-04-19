@@ -922,14 +922,20 @@ else:
 #X_pca = pca_model.fit_transform(X_input)
 #var_explained_local = pca_model.explained_variance_ratio_
 # --- Full SVD (no centering) ---
-U, S, Vt = np.linalg.svd(X_input, full_matrices=False)
+from sklearn.utils.extmath import randomized_svd
 
-# Project onto first 2 components
-X_pca = U[:, :2] * S[:2]
+U, S, Vt = randomized_svd(
+    X_input,
+    n_components=2,
+    random_state=42  # ensures reproducibility
+)
 
-# Variance explained (SVD-based, no centering)
+# Projection
+X_pca = U * S
+
+# Variance explained (uncentered, SVD-based)
 explained_variance = (S**2) / (X_input.shape[0] - 1)
-var_explained_local = explained_variance[:2] / explained_variance.sum()
+var_explained_local = explained_variance / explained_variance.sum()
 
 
 pca_scatter = pd.DataFrame({
