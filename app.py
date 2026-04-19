@@ -918,24 +918,24 @@ else:
     pca_note = "PCA on raw variables"
 
 # --- Run PCA ---
-pca_model = PCA(n_components=2)
-X_pca = pca_model.fit_transform(X_input)
-var_explained_local = pca_model.explained_variance_ratio_
+#pca_model = PCA(n_components=2)
+#X_pca = pca_model.fit_transform(X_input)
+#var_explained_local = pca_model.explained_variance_ratio_
 # --- Full SVD (no centering) ---
-#from sklearn.utils.extmath import randomized_svd
+from sklearn.utils.extmath import randomized_svd
 
-#U, S, Vt = randomized_svd(
-#    X_input,
-#    n_components=2,
-#    random_state=42  # ensures reproducibility
-#)
+U, S, Vt = randomized_svd(
+    X_input,
+    n_components=2,
+    random_state=42  # ensures reproducibility
+)
 
 # Projection
-#X_pca = U * S
+X_pca = U * S
 
 # Variance explained (uncentered, SVD-based)
-#explained_variance = (S**2) / (X_input.shape[0] - 1)
-#var_explained_local = explained_variance / explained_variance.sum()
+explained_variance = (S**2) / (X_input.shape[0] - 1)
+var_explained_local = explained_variance / explained_variance.sum()
 
 
 pca_scatter = pd.DataFrame({
