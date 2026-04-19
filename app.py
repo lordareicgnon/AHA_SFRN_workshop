@@ -914,7 +914,7 @@ if use_standardized_pca:
     X_input = StandardScaler().fit_transform(X_raw)
     pca_note = "PCA on standardized variables"
 else:
-    X_input = X_raw.values*np.array([10,1,2,5,0.2,6])
+    X_input = X_raw.values*np.array([10,1,2,5,0.2,6,3])
     pca_note = "PCA on raw variables"
 
 # --- Run PCA ---
