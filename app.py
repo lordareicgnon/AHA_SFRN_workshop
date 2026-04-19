@@ -908,7 +908,7 @@ use_standardized_pca = st.checkbox(
     key="pca_standardize_checkbox"
 )
 
-X_raw = survey_raw[PSYCHOSOCIAL_TOTALS].copy()
+X_raw = survey_raw[PSYCHOSOCIAL_TOTALS].copy()*np.array([10,1,2,5,0.2,6])
 
 if use_standardized_pca:
     X_input = StandardScaler().fit_transform(X_raw)
