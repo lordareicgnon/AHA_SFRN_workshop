@@ -914,13 +914,23 @@ if use_standardized_pca:
     X_input = StandardScaler().fit_transform(X_raw)
     pca_note = "PCA on standardized variables"
 else:
-    X_input = X_raw.values*np.array([0.01,1,2,5,2,0.2,3])
+    X_input = X_raw.values#*np.array([0.01,1,2,5,2,0.2,3])
     pca_note = "PCA on raw variables"
 
 # --- Run PCA ---
-pca_model = PCA(n_components=2)
-X_pca = pca_model.fit_transform(X_input)
-var_explained_local = pca_model.explained_variance_ratio_
+#pca_model = PCA(n_components=2)
+#X_pca = pca_model.fit_transform(X_input)
+#var_explained_local = pca_model.explained_variance_ratio_
+# --- Full SVD (no centering) ---
+U, S, Vt = np.linalg.svd(X_input, full_matrices=False)
+
+# Project onto first 2 components
+X_pca = U[:, :2] * S[:2]
+
+# Variance explained (SVD-based, no centering)
+explained_variance = (S**2) / (X_input.shape[0] - 1)
+var_explained_local = explained_variance[:2] / explained_variance.sum()
+
 
 pca_scatter = pd.DataFrame({
     "PC1": X_pca[:, 0],
