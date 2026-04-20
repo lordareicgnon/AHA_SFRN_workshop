@@ -117,8 +117,8 @@ if use_sample_data:
 elif uploaded_file is not None:
     col1, col2, col3 = st.columns(3)
     transpose = col1.checkbox("Transpose Data", value=False)
-    has_headers = col2.checkbox("Contains Headers", value=False)
-    has_index = col3.checkbox("Contains Indices", value=False)
+    has_headers = col2.checkbox("Contains Headers", value=True)
+    has_index = col3.checkbox("Contains Indices", value=True)
 
     try:
         df = read_uploaded_csv(
