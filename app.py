@@ -970,7 +970,6 @@ structure. Now we can ask: *who are the people along this spectrum?*
 """.format(var_explained[0]*100))
 
 
-
 # ═════════════════════════════════════════════════════════════════════════════
 # STEP 3 — WHO ARE THE PEOPLE? (CLUSTERING)
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1098,7 +1097,6 @@ if compare_toggle:
         fig.update_traces(marker=dict(size=4))
         fig.update_layout(height=350, font=FONT)
         st.plotly_chart(fig, use_container_width=True)
-
 
 # ── Cluster profiles (the key bridge from PCA) ──────────────────────────
 st.subheader("3b. Cluster Profiles")
@@ -1883,3 +1881,4 @@ instruments, identify those in the High Burden profile, check inflammatory marke
 IL-6), and provide integrated behavioral-cardiac interventions -- especially in
 neighborhoods flagged by the geospatial analysis as high-deprivation areas.
 """)
+
