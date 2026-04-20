@@ -895,79 +895,155 @@ st.markdown(f"""
 # ── PCA scatter — the bridge to clustering ───────────────────────────────
 st.subheader("2c. Visualizing Participants in Reduced Dimensions")
 st.markdown("""
-If we project all participants into the first two principal components, we can
-*see* the multivariate structure -- like an X-ray that reveals the internal
-arrangement of the data. Each dot is a patient, positioned according to their
-overall pattern of psychosocial scores.
+If all participants are projected into the first two principal components, the
+multivariate structure becomes visible — like an X-ray revealing the internal
+arrangement of the data. Each dot represents a participant, positioned according
+to the overall pattern of psychosocial scores.
 """)
 
-X_pca = PCA(n_components=2).fit_transform(X_std)
-pca_scatter = pd.DataFrame({"PC1": X_pca[:, 0], "PC2": X_pca[:, 1],
-                             "Phenotype": survey["stress_phenotype"]})
+# --- Choose whether to standardize before PCA ---
+use_standardized_pca = st.checkbox(
+    "Standardize variables before PCA",
+    value=True,
+    key="pca_standardize_checkbox"
+)
+
+X_raw = survey_raw[PSYCHOSOCIAL_TOTALS].copy()
+
+if use_standardized_pca:
+    X_input = StandardScaler().fit_transform(X_raw)
+    pca_note = "PCA on standardized variables"
+else:
+    X_input = X_raw.values#*np.array([0.01,1,2,5,2,0.2,3])
+    pca_note = "PCA on raw variables"
+
+# --- Run PCA ---
+#pca_model = PCA(n_components=2)
+#X_pca = pca_model.fit_transform(X_input)
+#var_explained_local = pca_model.explained_variance_ratio_
+# --- Full SVD (no centering) ---
+from sklearn.utils.extmath import randomized_svd
+
+U, S, Vt = randomized_svd(
+    X_input,
+    n_components=2,
+    random_state=42  # ensures reproducibility
+)
+
+# Projection
+X_pca = U * S
+
+# Variance explained (uncentered, SVD-based)
+explained_variance = (S**2) / (X_input.shape[0] - 1)
+var_explained_local = explained_variance / explained_variance.sum()
+
+
+pca_scatter = pd.DataFrame({
+    "PC1": X_pca[:, 0],
+    "PC2": X_pca[:, 1],
+    "Phenotype": survey["stress_phenotype"]
+})
 
 # Add demographic columns for interactive coloring
 for demo_col_name in ["sex", "race_ethnicity"]:
     if demo_col_name in survey_raw.columns:
         pca_scatter[demo_col_name] = survey_raw[demo_col_name].values
+
 if "age" in survey_raw.columns:
     pca_scatter["age"] = survey_raw["age"].values
-    pca_scatter["Age Group"] = pd.cut(survey_raw["age"], bins=[0, 35, 50, 65, 100],
-                                       labels=["18-35", "36-50", "51-65", "66+"])
+    pca_scatter["Age Group"] = pd.cut(
+        survey_raw["age"],
+        bins=[0, 35, 50, 65, 100],
+        labels=["18-35", "36-50", "51-65", "66+"]
+    )
 
 pca_color_by = st.radio(
     "Color PCA scatter by:",
     ["Cluster", "Sex", "Age Group", "Race/Ethnicity"],
-    horizontal=True, key="pca_color_radio"
+    horizontal=True,
+    key="pca_color_radio"
 )
 
+plot_title = f"{pca_note}"
+
 if pca_color_by == "Cluster":
-    fig = px.scatter(pca_scatter, x="PC1", y="PC2", color="Phenotype",
-                     color_discrete_map=COLORS, opacity=0.5,
-                     category_orders={"Phenotype": phenotype_order},
-                     title="Participants in PCA Space (colored by stress phenotype)")
+    fig = px.scatter(
+        pca_scatter, x="PC1", y="PC2", color="Phenotype",
+        color_discrete_map=COLORS, opacity=0.5,
+        category_orders={"Phenotype": phenotype_order},
+        title=f"{plot_title} (colored by stress phenotype)"
+    )
 elif pca_color_by == "Sex" and "sex" in pca_scatter.columns:
-    fig = px.scatter(pca_scatter, x="PC1", y="PC2", color="sex",
-                     opacity=0.5, title="Participants in PCA Space (colored by sex)")
+    fig = px.scatter(
+        pca_scatter, x="PC1", y="PC2", color="sex",
+        opacity=0.5, title=f"{plot_title} (colored by sex)"
+    )
 elif pca_color_by == "Age Group" and "Age Group" in pca_scatter.columns:
-    fig = px.scatter(pca_scatter, x="PC1", y="PC2", color="Age Group",
-                     opacity=0.5, title="Participants in PCA Space (colored by age group)")
+    fig = px.scatter(
+        pca_scatter, x="PC1", y="PC2", color="Age Group",
+        opacity=0.5, title=f"{plot_title} (colored by age group)"
+    )
 elif pca_color_by == "Race/Ethnicity" and "race_ethnicity" in pca_scatter.columns:
-    fig = px.scatter(pca_scatter, x="PC1", y="PC2", color="race_ethnicity",
-                     opacity=0.5, title="Participants in PCA Space (colored by race/ethnicity)")
+    fig = px.scatter(
+        pca_scatter, x="PC1", y="PC2", color="race_ethnicity",
+        opacity=0.5, title=f"{plot_title} (colored by race/ethnicity)"
+    )
 else:
-    fig = px.scatter(pca_scatter, x="PC1", y="PC2", color="Phenotype",
-                     color_discrete_map=COLORS, opacity=0.5,
-                     category_orders={"Phenotype": phenotype_order},
-                     title="Participants in PCA Space")
+    fig = px.scatter(
+        pca_scatter, x="PC1", y="PC2", color="Phenotype",
+        color_discrete_map=COLORS, opacity=0.5,
+        category_orders={"Phenotype": phenotype_order},
+        title=plot_title
+    )
 
 fig.update_traces(marker=dict(size=4))
 fig.update_layout(height=450, font=FONT)
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("""
-**Interpretation:** The clusters separate along PC1 (general distress). This tells us
-something important: the instruments are fundamentally measuring a **spectrum of
-psychosocial burden**, and the clusters we find in Step 3 represent **distinct
-positions along this spectrum** -- not random groupings.
+st.markdown(f"""
+**Variance explained:** PC1 explains **{var_explained_local[0]*100:.1f}%** of the variance,
+and PC2 explains **{var_explained_local[1]*100:.1f}%**.
 
-This is why PCA comes first: it tells us *what the data is measuring* and confirms
-that meaningful structure exists before we try to segment people into groups. It is
-the analytical equivalent of confirming a disease actually exists before trying to
-classify patients by severity.
+**Why this matters:** PCA is sensitive to scale. Without normalization, instruments with
+larger numeric ranges can dominate the principal components simply because their values
+are bigger. With normalization, each instrument contributes on a comparable scale, so
+the components reflect shared structure rather than raw magnitude.
+""")
+
+if use_standardized_pca:
+    st.success("""
+    Standardization is turned on. This means each instrument contributes equally in scale,
+    making PCA reflect patterns across constructs rather than differences in raw units.
+    """)
+else:
+    st.warning("""
+    Standardization is turned off. In this view, instruments with larger numeric ranges
+    may dominate the PCA solution, which can distort interpretation.
+    """)
+
+st.markdown("""
+**Interpretation:** The clusters separate mainly along PC1, suggesting that the
+instruments are largely capturing a common spectrum of psychosocial burden. PCA helps
+confirm that meaningful structure exists before clustering is applied.
+
+This step is important because it shows whether the observed participant structure
+reflects real multivariate signal or just differences in measurement scale.
 """)
 
 st.markdown("""
 > **How can this be applied?** In an omics study, the same approach could be used to
-> determine whether 50 cytokine measurements really capture 50 different things, or
-> whether they boil down to 3-4 inflammatory axes. This dramatically simplifies
-> downstream modeling and interpretation.
+> test whether many biomarkers reflect a small number of shared biological axes. PCA
+> can simplify downstream modeling, but only if the variables are placed on a
+> comparable scale first.
 """)
 
-st.info("""
-**PCA summary:** Our 7 instruments largely measure one dominant construct (general
-psychosocial distress), explaining ~{:.0f}% of variance. The data has clear multivariate
-structure. Now we can ask: *who are the people along this spectrum?*
-""".format(var_explained[0]*100))
+st.info(f"""
+**PCA summary:** Using {'standardized' if use_standardized_pca else 'raw'} inputs,
+PC1 explains about {var_explained_local[0]*100:.0f}% of the variance. This section
+shows why normalization matters: PCA can either reflect true shared structure or be
+driven by measurement scale, depending on preprocessing.
+""")
+
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1097,6 +1173,7 @@ if compare_toggle:
         fig.update_traces(marker=dict(size=4))
         fig.update_layout(height=350, font=FONT)
         st.plotly_chart(fig, use_container_width=True)
+
 
 # ── Cluster profiles (the key bridge from PCA) ──────────────────────────
 st.subheader("3b. Cluster Profiles")
@@ -1881,4 +1958,3 @@ instruments, identify those in the High Burden profile, check inflammatory marke
 IL-6), and provide integrated behavioral-cardiac interventions -- especially in
 neighborhoods flagged by the geospatial analysis as high-deprivation areas.
 """)
-
