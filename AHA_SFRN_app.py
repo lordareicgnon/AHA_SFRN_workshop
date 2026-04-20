@@ -13,14 +13,17 @@ import VillageNet as VN
 
 
 def read_uploaded_csv(uploaded_file, transpose=False, has_headers=False, has_index=False):
-    df = pd.read_csv(uploaded_file, header=None)
-
-    if transpose:
-        df = df.T
+    
     if has_headers:
-        df = df.rename(columns=df.iloc[0]).drop(df.index[0])
+        df = pd.read_csv(uploaded_file)#, header=None)
+    else:    
+        df = pd.read_csv(uploaded_file, header=None)
+
     if has_index:
         df = df.set_index(df.columns.tolist()[0])
+    if transpose:
+        df = df.T
+    
 
     return df
 
